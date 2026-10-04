@@ -75,6 +75,18 @@ Press F12 to see the console for debugging.</p>
         <label for="translateY">Move Y:</label>
         <input type="range" id="translateY" min="-2" max="2" step="0.1" value="0">
       </div>
+      <div>
+        <label for="baseRotation">Base Rotation:</label>
+        <input type="range" id="baseRotation" min="-180" max="180" value="0">
+      </div>
+      <div>
+        <label for="lowerArmRotation">Lower Arm: </label>
+        <input type="range" id="lowerArmRotation" min="-90" max="90" value="0">
+      </div>
+      <div>
+        <label for="upperArmRotation">Upper Arm: </label>
+        <input type="range" id="upperArmRotation" min="-120" max="120" value="0">
+      </div>
     </div>
     <div>
       <canvas id="glcanvas" width="600" height="600"></canvas>
@@ -179,6 +191,7 @@ void main() {
         uMTM = gl.getUniformLocation(program, "uModelTransformationMatrix");
       } catch (e) { console.error(e); }
     }
+
     initShaderProgram();
     vertEditor.onkeyup = initShaderProgram;
     fragEditor.onkeyup = initShaderProgram;
@@ -190,6 +203,16 @@ void main() {
     let objectScale = 1.0;
     let objectX = 0;
     let objectY = 0;
+
+    let baseAngle = 0;
+    let lowerArmAngle = 0;
+    let upperArmAngle = 0;
+
+    const baseHeight = 0.4;
+    const lowerLength = 1.5;
+    const upperLength = 1.2;
+    const handLength = 0.5;
+    const armWidth = 0.3;
 
     canvas.addEventListener('mousedown', e => { mouseDown = true; lastX = e.clientX; lastY = e.clientY; });
     canvas.addEventListener('mouseup', () => mouseDown = false);
@@ -224,9 +247,9 @@ void main() {
     let projPerspective = perspective(fov, aspect, zNear, zFar);
 
     let projOrtho = matMul(
-    box2Cube(-orthoSize * aspect, orthoSize * aspect, -orthoSize, orthoSize, zNear, zFar),
-    flipZ()
-);
+      box2Cube(-orthoSize * aspect, orthoSize * aspect, -orthoSize, orthoSize, zNear, zFar),
+      flipZ()
+    );
     let proj = projOrtho;
 
     let startTime = Date.now();
@@ -247,27 +270,16 @@ void main() {
       let rotY = [cx, 0, -sx, 0, 0, 1, 0, 0, sx, 0, cx, 0, 0, 0, 0, 1];
       let cubeRotation = multiplyMat4(rotY, rotX);
 
-      // init model-view matrix as identity matrix
-      let modelViewMatrix = mat4Identity();
-      // init model transformation matrix as identity matrix
-      let modelTransformationMatrix = mat4Identity();
-
       //delta time in ms
       let deltaTime = Date.now() - startTime;
-      //object translation
-      modelTransformationMatrix = mat4Translate(modelTransformationMatrix, [objectX, objectY, 0]);
-      // object rotation
-      modelTransformationMatrix = multiplyMat4(modelTransformationMatrix, cubeRotation);
-      // object scaling
-      modelTransformationMatrix = mat4Scale(modelTransformationMatrix, [objectScale, objectScale, objectScale]);
       // camera translation
+      let modelViewMatrix = mat4Identity();
       modelViewMatrix = mat4Translate(modelViewMatrix, [camX, camY, camZ]);
-      
+
       //set time in seconds
       gl.uniform1f(timeLoc, deltaTime/1000.0);
       gl.uniformMatrix4fv(uPM, false, proj);
       gl.uniformMatrix4fv(uMVM, false, modelViewMatrix);
-      gl.uniformMatrix4fv(uMTM, false, modelTransformationMatrix);
 
       gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
       gl.enableVertexAttribArray(posLoc);
@@ -278,7 +290,67 @@ void main() {
       gl.vertexAttribPointer(colorLoc, 3, gl.FLOAT, false, 0, 0);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
 
-      // draw the object by the index order
+      // root transformation
+      let rootMatrix = mat4Identity();
+      rootMatrix = mat4Translate(rootMatrix, [objectX, objectY, 0]);
+      rootMatrix = multiplyMat4(rootMatrix, cubeRotation);
+      rootMatrix = mat4Scale(rootMatrix, [objectScale, objectScale, objectScale]);
+
+      // base
+      let baseFrame = multiplyMat4(rootMatrix, rotationY(baseAngle));
+      let baseDraw = mat4Scale(baseFrame, [1.0, baseHeight, 1.0]);
+      drawPart(baseDraw);
+
+      // lower arm
+      let lowerFrame = mat4Translate(baseFrame, [0, baseHeight, 0]);
+      lowerFrame = multiplyMat4(lowerFrame, rotationZ(lowerArmAngle));
+      let lowerDraw = mat4Translate(lowerFrame, [0, lowerLength/2, 0]); 
+      lowerDraw = mat4Scale(lowerDraw, [armWidth, lowerLength, armWidth]);
+      drawPart(lowerDraw);
+
+      // upper arm
+      let upperFrame = mat4Translate(lowerFrame, [0, lowerLength, 0]);
+      upperFrame = multiplyMat4(upperFrame, rotationZ(upperArmAngle));
+      let upperDraw = mat4Translate(upperFrame, [0, upperLength/2, 0]);
+      upperDraw = mat4Scale(upperDraw, [armWidth, upperLength, armWidth]);
+      drawPart(upperDraw);
+
+      // hand
+      let handFrame = mat4Translate(upperFrame, [0, upperLength, 0]);
+      let handDraw = mat4Translate(handFrame, [0, handLength/2, 0]);
+      handDraw = mat4Scale(handDraw, [0.5, handLength, 0.5]);
+      drawPart(handDraw);
+      
+    }
+
+    // generic rotation functions
+    function rotationZ(angle) {
+      let c = Math.cos(angle);
+      let s = Math.sin(angle);
+
+      return [
+        c, s, 0, 0,
+        -s, c, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+      ];
+    }
+
+    function rotationY(angle) {
+      let c = Math.cos(angle);
+      let s = Math.sin(angle);
+
+      return [
+        c, 0, -s, 0,
+        0, 1, 0, 0,
+        s, 0, c, 0,
+        0, 0, 0, 1
+      ];
+    }
+
+    // allows multiple calls to draw rather than one call to render
+    function drawPart(matrix) {
+      gl.uniformMatrix4fv(uMTM, false, matrix);
       gl.drawElements(gl.TRIANGLES, selectedObject.indices.length, gl.UNSIGNED_SHORT, 0);
     }
 
@@ -286,7 +358,7 @@ void main() {
     window.onload = function () {
       setInterval(render, 30);
     }
-
+    
     const objectSelector = document.getElementById("objectSelector");
 
   // listens for object change  
@@ -325,11 +397,10 @@ void main() {
     objectScale = parseFloat(this.value);
   })
 
-  const translateX =
-      document.getElementById("translateX");
+  const translateX = document.getElementById("translateX");
 
-  const translateY =
-      document.getElementById("translateY");
+  const translateY = document.getElementById("translateY");
+      
 
   translateX.addEventListener("input", function () {
       objectX = parseFloat(this.value);
@@ -338,6 +409,27 @@ void main() {
   translateY.addEventListener("input", function () {
       objectY = parseFloat(this.value);
   });
+
+  const baseRotation = document.getElementById("baseRotation");
+    
+
+  const lowerArmRotation = document.getElementById("lowerArmRotation");
+      
+
+  const upperArmRotation = document.getElementById("upperArmRotation");
+      
+
+  baseRotation.addEventListener("input", function () {
+        baseAngle = parseFloat(this.value) * Math.PI / 180;
+    });
+
+    lowerArmRotation.addEventListener("input", function () {
+        lowerArmAngle = parseFloat(this.value) * Math.PI / 180;
+    });
+
+    upperArmRotation.addEventListener("input", function () {
+        upperArmAngle = parseFloat(this.value) * Math.PI / 180;
+    });
 
   </script>
 </body>

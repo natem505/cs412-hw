@@ -96,7 +96,6 @@ Press F12 to see the console for debugging.</p>
   <!-- Vertex shader -->
   <script id="vertex-shader" type="x-shader/x-vertex">#version 300 es
     in vec3 aPosition;
-    in vec3 aColor;
 
     uniform float uTime; //time in sec
     uniform mat4 uModelViewMatrix;
@@ -159,7 +158,7 @@ Press F12 to see the console for debugging.</p>
     vertEditor.value = document.getElementById("vertex-shader").textContent;
     fragEditor.value = document.getElementById("fragment-shader").textContent;
 
-    let program, posLoc, colorLoc, timeLoc, uMVM, uPM, uMTM, uColor;
+    let program, posLoc, timeLoc, uMVM, uPM, uMTM, uColor;
     let vbo, nbo, ibo;
 
     let selectedObject = cube; // init object selector
@@ -184,7 +183,6 @@ Press F12 to see the console for debugging.</p>
         program = createProgram(gl, vertEditor.value, fragEditor.value);
         gl.useProgram(program);
         posLoc = gl.getAttribLocation(program, "aPosition");
-        colorLoc = gl.getAttribLocation(program, "uColor");
         timeLoc = gl.getUniformLocation(program, "uTime");
         uMVM = gl.getUniformLocation(program, "uModelViewMatrix");
         uPM = gl.getUniformLocation(program, "uProjectionMatrix");
@@ -285,9 +283,6 @@ Press F12 to see the console for debugging.</p>
       gl.enableVertexAttribArray(posLoc);
       gl.vertexAttribPointer(posLoc, 3, gl.FLOAT, false, 0, 0);
 
-      gl.bindBuffer(gl.ARRAY_BUFFER, nbo);
-      gl.enableVertexAttribArray(colorLoc);
-      gl.vertexAttribPointer(colorLoc, 3, gl.FLOAT, false, 0, 0);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
 
       // root transformation

@@ -61,7 +61,7 @@ Press F12 to see the console for debugging.</p>
         </select>
       </div>
       <div>
-        <button id="toggleRotation">Stop Rotation</button>
+        <button id="toggleRotation">Start Rotation</button>
       </div>
       <div>
         <label for="scaleSlider">Scale:</label>
@@ -97,17 +97,14 @@ Press F12 to see the console for debugging.</p>
   <script id="vertex-shader" type="x-shader/x-vertex">#version 300 es
     in vec3 aPosition;
 
-    uniform float uTime; //time in sec
     uniform mat4 uModelViewMatrix;
     uniform mat4 uProjectionMatrix;
     uniform mat4 uModelTransformationMatrix;
 
-    out vec3 vColor;
-
     void main() {
-      gl_Position = uProjectionMatrix * uModelViewMatrix * uModelTransformationMatrix * vec4(aPosition,1.0);
-      vColor = aColor;
-    }
+      gl_Position = uProjectionMatrix * uModelViewMatrix * 
+      uModelTransformationMatrix * vec4(aPosition, 1.0);
+  }
   </script>
   <!-- Fragment Shader -->
   <script id="fragment-shader" type="x-shader/x-fragment">#version 300 es
@@ -187,6 +184,7 @@ Press F12 to see the console for debugging.</p>
         uMVM = gl.getUniformLocation(program, "uModelViewMatrix");
         uPM = gl.getUniformLocation(program, "uProjectionMatrix");
         uMTM = gl.getUniformLocation(program, "uModelTransformationMatrix");
+        uColor = gl.getUniformLocation(program, "uColor");
       } catch (e) { console.error(e); }
     }
 
@@ -200,7 +198,7 @@ Press F12 to see the console for debugging.</p>
 
     let objectScale = 1.0;
     let objectX = 0;
-    let objectY = 0;
+    let objectY = -1.5;
 
     let baseAngle = 0;
     let lowerArmAngle = 0;
@@ -239,7 +237,7 @@ Press F12 to see the console for debugging.</p>
     // Projection setup
     let fov = Math.PI / 4, aspect = canvas.width / canvas.height, zNear = 0.1, zFar = 100;
 
-    let orthoSize = 4.0;
+    let orthoSize = 3.0;
 
     // Perspective and Orthographic projection
     let projPerspective = perspective(fov, aspect, zNear, zFar);
@@ -294,27 +292,27 @@ Press F12 to see the console for debugging.</p>
       // base
       let baseFrame = multiplyMat4(rootMatrix, rotationY(baseAngle));
       let baseDraw = mat4Scale(baseFrame, [1.0, baseHeight, 1.0]);
-      drawPart(baseDraw,[0.18, 0.18, 0.20]);
+      drawPart(baseDraw,[0.20, 0.20, 0.22]);
 
       // lower arm
       let lowerFrame = mat4Translate(baseFrame, [0, baseHeight, 0]);
       lowerFrame = multiplyMat4(lowerFrame, rotationZ(lowerArmAngle));
       let lowerDraw = mat4Translate(lowerFrame, [0, lowerLength/2, 0]); 
       lowerDraw = mat4Scale(lowerDraw, [armWidth, lowerLength, armWidth]);
-      drawPart(lowerDraw,[0.12, 0.45, 0.85]);
+      drawPart(lowerDraw,[0.85, 0.55, 0.15]);
 
       // upper arm
       let upperFrame = mat4Translate(lowerFrame, [0, lowerLength, 0]);
       upperFrame = multiplyMat4(upperFrame, rotationZ(upperArmAngle));
       let upperDraw = mat4Translate(upperFrame, [0, upperLength/2, 0]);
       upperDraw = mat4Scale(upperDraw, [armWidth, upperLength, armWidth]);
-      drawPart(upperDraw,[0.20, 0.60, 0.95]);
+      drawPart(upperDraw,[0.90, 0.65, 0.20]);
 
       // hand
       let handFrame = mat4Translate(upperFrame, [0, upperLength, 0]);
       let handDraw = mat4Translate(handFrame, [0, handLength/2, 0]);
       handDraw = mat4Scale(handDraw, [0.5, handLength, 0.5]);
-      drawPart(handDraw,[0.70, 0.72, 0.75]);
+      drawPart(handDraw,[0.75, 0.75, 0.78]);
       
     }
 
@@ -373,7 +371,7 @@ Press F12 to see the console for debugging.</p>
   });
 
   // rotation button
-  let rotationOn = true; 
+  let rotationOn = false; 
 
   const toggleRotationButton = document.getElementById("toggleRotation");
 

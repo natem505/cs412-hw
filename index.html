@@ -298,7 +298,7 @@ Press F12 to see the console for debugging.</p>
 
       // base
       let baseFrame = multiplyMat4(rootMatrix, rotationY(baseAngle));
-      let baseDraw = mat4Scale(baseFrame, [0.5, baseHeight, 0.5]);
+      let baseDraw = mat4Scale(baseFrame, [1.0, baseHeight, 1.0]);
       drawPart(baseDraw,[0.18, 0.18, 0.20]);
 
       // lower arm

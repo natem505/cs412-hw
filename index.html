@@ -95,32 +95,32 @@ Press F12 to see the console for debugging.</p>
 
   <!-- Vertex shader -->
   <script id="vertex-shader" type="x-shader/x-vertex">#version 300 es
-in vec3 aPosition;
-in vec3 aColor;
+    in vec3 aPosition;
+    in vec3 aColor;
 
-uniform float uTime; //time in sec
-uniform mat4 uModelViewMatrix;
-uniform mat4 uProjectionMatrix;
-uniform mat4 uModelTransformationMatrix;
+    uniform float uTime; //time in sec
+    uniform mat4 uModelViewMatrix;
+    uniform mat4 uProjectionMatrix;
+    uniform mat4 uModelTransformationMatrix;
 
-out vec3 vColor;
+    out vec3 vColor;
 
-void main() {
-  gl_Position = uProjectionMatrix * uModelViewMatrix * uModelTransformationMatrix * vec4(aPosition,1.0);
-  vColor = aColor;
-}
-</script>
+    void main() {
+      gl_Position = uProjectionMatrix * uModelViewMatrix * uModelTransformationMatrix * vec4(aPosition,1.0);
+      vColor = aColor;
+    }
+  </script>
   <!-- Fragment Shader -->
   <script id="fragment-shader" type="x-shader/x-fragment">#version 300 es
-precision mediump float;
-in vec3 vColor;
+    precision mediump float;
+    uniform vec3 uColor;
 
-out vec4 fragColor;
+    out vec4 fragColor;
 
-void main() {
-  fragColor = vec4(vColor,1.0);
-}
-</script>
+    void main() {
+      fragColor = vec4(uColor,1.0);
+    }
+  </script>
 
   <script src="primitives.js"></script>
   <script src="transformations.js"></script>
@@ -159,7 +159,7 @@ void main() {
     vertEditor.value = document.getElementById("vertex-shader").textContent;
     fragEditor.value = document.getElementById("fragment-shader").textContent;
 
-    let program, posLoc, colorLoc, timeLoc, uMVM, uPM, uMTM;
+    let program, posLoc, colorLoc, timeLoc, uMVM, uPM, uMTM, uColor;
     let vbo, nbo, ibo;
 
     let selectedObject = cube; // init object selector
@@ -184,7 +184,7 @@ void main() {
         program = createProgram(gl, vertEditor.value, fragEditor.value);
         gl.useProgram(program);
         posLoc = gl.getAttribLocation(program, "aPosition");
-        colorLoc = gl.getAttribLocation(program, "aColor");
+        colorLoc = gl.getAttribLocation(program, "uColor");
         timeLoc = gl.getUniformLocation(program, "uTime");
         uMVM = gl.getUniformLocation(program, "uModelViewMatrix");
         uPM = gl.getUniformLocation(program, "uProjectionMatrix");
@@ -241,7 +241,7 @@ void main() {
     // Projection setup
     let fov = Math.PI / 4, aspect = canvas.width / canvas.height, zNear = 0.1, zFar = 100;
 
-    let orthoSize = 2.5;
+    let orthoSize = 4.0;
 
     // Perspective and Orthographic projection
     let projPerspective = perspective(fov, aspect, zNear, zFar);
@@ -298,28 +298,28 @@ void main() {
 
       // base
       let baseFrame = multiplyMat4(rootMatrix, rotationY(baseAngle));
-      let baseDraw = mat4Scale(baseFrame, [1.0, baseHeight, 1.0]);
-      drawPart(baseDraw);
+      let baseDraw = mat4Scale(baseFrame, [0.5, baseHeight, 0.5]);
+      drawPart(baseDraw,[0.18, 0.18, 0.20]);
 
       // lower arm
       let lowerFrame = mat4Translate(baseFrame, [0, baseHeight, 0]);
       lowerFrame = multiplyMat4(lowerFrame, rotationZ(lowerArmAngle));
       let lowerDraw = mat4Translate(lowerFrame, [0, lowerLength/2, 0]); 
       lowerDraw = mat4Scale(lowerDraw, [armWidth, lowerLength, armWidth]);
-      drawPart(lowerDraw);
+      drawPart(lowerDraw,[0.12, 0.45, 0.85]);
 
       // upper arm
       let upperFrame = mat4Translate(lowerFrame, [0, lowerLength, 0]);
       upperFrame = multiplyMat4(upperFrame, rotationZ(upperArmAngle));
       let upperDraw = mat4Translate(upperFrame, [0, upperLength/2, 0]);
       upperDraw = mat4Scale(upperDraw, [armWidth, upperLength, armWidth]);
-      drawPart(upperDraw);
+      drawPart(upperDraw,[0.20, 0.60, 0.95]);
 
       // hand
       let handFrame = mat4Translate(upperFrame, [0, upperLength, 0]);
       let handDraw = mat4Translate(handFrame, [0, handLength/2, 0]);
       handDraw = mat4Scale(handDraw, [0.5, handLength, 0.5]);
-      drawPart(handDraw);
+      drawPart(handDraw,[0.70, 0.72, 0.75]);
       
     }
 
@@ -349,8 +349,9 @@ void main() {
     }
 
     // allows multiple calls to draw rather than one call to render
-    function drawPart(matrix) {
+    function drawPart(matrix, color) {
       gl.uniformMatrix4fv(uMTM, false, matrix);
+      gl.uniform3fv(uColor, color);
       gl.drawElements(gl.TRIANGLES, selectedObject.indices.length, gl.UNSIGNED_SHORT, 0);
     }
 
